@@ -37,7 +37,7 @@ void inicializarFila(Fila *fila)
 
 int estaCheiaFila(Fila *fila)
 {
-    return (fila->fim + 1) % MAX_FILA == fila->inicio;
+    return fila->fim == MAX_FILA - 1;
 }
 
 int estaVaziaFila(Fila *fila)
@@ -62,6 +62,12 @@ void enfileirar(Fila *fila, Pilha *pilha1, Pilha *pilha2)
         int tamanho;
         printf("Informe o tamanho da caixa (1, 2 ou 3): ");
         scanf("%d", &tamanho);
+
+        if (tamanho < 1 || tamanho > 3)
+        {
+            printf("Tamanho inválido. Informe um valor entre 1 e 3.\n");
+            return;
+        }
 
         Caixa *novaCaixa = (Caixa *)malloc(sizeof(Caixa));
         novaCaixa->tamanho = tamanho;
@@ -95,12 +101,11 @@ void enfileirar(Fila *fila, Pilha *pilha1, Pilha *pilha2)
 
                 fila->caixas[fila->fim] = novaCaixa;
 
-                strcpy(novaCaixa->status, "aguardando");
+                strcpy(novaCaixa->status, "AGUARDANDO");
                 printf("Caixa de tamanho %d enfileirada.\n", novaCaixa->tamanho);
                 return;
             }
         }
-
         // Cadastrar caixa de tamanho 1 ou 2
         if (estaVaziaFila(fila))
         {
@@ -110,9 +115,10 @@ void enfileirar(Fila *fila, Pilha *pilha1, Pilha *pilha2)
 
         fila->caixas[fila->fim] = novaCaixa;
 
-        strcpy(novaCaixa->status, "aguardando");
+        strcpy(novaCaixa->status, "AGUARDANDO");
         printf("Caixa de tamanho %d enfileirada.\n", novaCaixa->tamanho);
     }
+
     else
     {
         printf("Fila cheia. Nao e possivel enfileirar mais caixas.\n");
@@ -121,117 +127,47 @@ void enfileirar(Fila *fila, Pilha *pilha1, Pilha *pilha2)
 
 void empilhar(Fila *fila, Pilha *pilha1, Pilha *pilha2)
 {
-    // Verificar se há caixas na fila para empilhar
-    if (!estaVaziaFila(fila))
+    for (int i = 0; i < MAX_FILA; i++)
     {
-        // Encontrar a maior caixa na fila
-        int indiceMaiorCaixa = fila->inicio;
-        int maiorTamanho = fila->caixas[indiceMaiorCaixa]->tamanho;
-
-        for (int i = (fila->inicio + 1) % MAX_FILA; i != (fila->fim + 1) % MAX_FILA; i = (i + 1) % MAX_FILA)
+        Caixa *proximaCaixa = fila->caixas[i];
+        // comparar tamanho da caixa com o topo da pilha
+        if (!estaCheiaPilha(pilha1) && proximaCaixa->tamanho <= pilha1->caixas[pilha1->topo]->tamanho)
         {
-            if (fila->caixas[i]->tamanho > maiorTamanho)
-            {
-                maiorTamanho = fila->caixas[i]->tamanho;
-                indiceMaiorCaixa = i;
-            }
+            pilha1->topo++;
+            pilha1->caixas[pilha1->topo] = proximaCaixa;
+            strcpy(proximaCaixa->status, "EMPILHADA");
+            printf("Caixa de tamanho %d empilhada na Pilha 1.\n", proximaCaixa->tamanho);
+            free(fila->caixas[i]);
+            fila->caixas[i] = NULL;
+            fila->fim = fila->fim - 1;
         }
-
-        // Retirar a maior caixa da fila
-        Caixa *caixaParaEmpilhar = fila->caixas[indiceMaiorCaixa];
-        fila->caixas[indiceMaiorCaixa] = NULL; // Liberar o espaço na fila
-        fila->inicio = (fila->inicio + 1) % MAX_FILA;
-
-        // Empilhar a caixa na pilha correspondente
-        if (maiorTamanho == 3)
+        else if (!estaCheiaPilha(pilha2) && proximaCaixa->tamanho <= pilha2->caixas[pilha2->topo]->tamanho)
         {
-            if (!estaCheiaPilha(pilha1))
-            {
-                pilha1->topo++;
-                pilha1->caixas[pilha1->topo] = caixaParaEmpilhar;
-                strcpy(caixaParaEmpilhar->status, "EMPILHADA");
-                printf("Caixa de tamanho %d empilhada na Pilha 1.\n", caixaParaEmpilhar->tamanho);
-            }
-            else if (!estaCheiaPilha(pilha2))
-            {
-                pilha2->topo++;
-                pilha2->caixas[pilha2->topo] = caixaParaEmpilhar;
-                strcpy(caixaParaEmpilhar->status, "EMPILHADA");
-                printf("Caixa de tamanho %d empilhada na Pilha 2.\n", caixaParaEmpilhar->tamanho);
-            }
-            else
-            {
-                // Pilhas cheias, reenfileirar a caixa
-                fila->fim = (fila->fim + 1) % MAX_FILA;
-                fila->caixas[fila->fim] = caixaParaEmpilhar;
-                strcpy(caixaParaEmpilhar->status, "aguardando");
-                printf("Caixa de tamanho %d reenfileirada.\n", caixaParaEmpilhar->tamanho);
-            }
+            pilha2->topo++;
+            pilha2->caixas[pilha2->topo] = proximaCaixa;
+            strcpy(proximaCaixa->status, "EMPILHADA");
+            printf("Caixa de tamanho %d empilhada na Pilha 2.\n", proximaCaixa->tamanho);
+            free(fila->caixas[i]);
+            fila->caixas[i] = NULL;
+            fila->fim = fila->fim - 1;
         }
         else
         {
-            // Caixa de tamanho 1 ou 2
-            if (!estaCheiaPilha(pilha1))
-            {
-                pilha1->topo++;
-                pilha1->caixas[pilha1->topo] = caixaParaEmpilhar;
-                strcpy(caixaParaEmpilhar->status, "EMPILHADA");
-                printf("Caixa de tamanho %d empilhada na Pilha 1.\n", caixaParaEmpilhar->tamanho);
-            }
-            else if (!estaCheiaPilha(pilha2))
-            {
-                pilha2->topo++;
-                pilha2->caixas[pilha2->topo] = caixaParaEmpilhar;
-                strcpy(caixaParaEmpilhar->status, "EMPILHADA");
-                printf("Caixa de tamanho %d empilhada na Pilha 2.\n", caixaParaEmpilhar->tamanho);
-            }
-            else
-            {
-                // Pilhas cheias, reenfileirar a caixa
-                fila->fim = (fila->fim + 1) % MAX_FILA;
-                fila->caixas[fila->fim] = caixaParaEmpilhar;
-                strcpy(caixaParaEmpilhar->status, "aguardando");
-                printf("Caixa de tamanho %d reenfileirada.\n", caixaParaEmpilhar->tamanho);
-            }
+            printf("nao foi possivel empilhar a caixa de tamanho %d\n", proximaCaixa->tamanho);
+            break;
         }
     }
-    else
-    {
-        printf("Fila vazia. Nao ha caixas para empilhar.\n");
-    }
 }
-
 
 void desempilhar(Pilha *pilha)
 {
-    if (!estaVaziaPilha(pilha))
+    while(pilha->topo > -1 && pilha->caixas[pilha->topo] != NULL)
     {
-        Caixa *caixaDesempilhada = pilha->caixas[pilha->topo];
+        printf("Caixa de tamanho %d desempilhada.\n", pilha->caixas[pilha->topo]->tamanho);
+        pilha->caixas[pilha->topo] = NULL;
         pilha->topo--;
-
-        printf("Caixa de tamanho %d desempilhada.\n", caixaDesempilhada->tamanho);
-
-        free(caixaDesempilhada); // Liberar espaço de memória da caixa desempilhada
-    }
-    else
-    {
-        printf("Pilha vazia. Nao e possivel desempilhar.\n");
-    }
-}
-
-void desempilharAmbasPilhas(Pilha *pilha1, Pilha *pilha2)
-{
-    printf("Desempilhando ambas as pilhas...\n");
-
-    while (!estaVaziaPilha(pilha1))
-    {
-        desempilhar(pilha1);
-    }
-
-    while (!estaVaziaPilha(pilha2))
-    {
-        desempilhar(pilha2);
-    }
+    } 
+        printf("Pilha vazia. Nao e possivel desempilhar caixas.\n");
 }
 
 void exibir(Fila *fila, Pilha *pilha1, Pilha *pilha2)
@@ -242,12 +178,13 @@ void exibir(Fila *fila, Pilha *pilha1, Pilha *pilha2)
 
     if (!estaVaziaFila(fila))
     {
-        int i = fila->inicio;
-        do
+        for (int i = 0; i <= fila->fim; i++)
         {
-            printf("caixa tamanho: %d %s\n", fila->caixas[i]->tamanho, fila->caixas[i]->status);
-            i = (i + 1) % MAX_FILA;
-        } while (i != (fila->fim + 1) % MAX_FILA);
+            if (fila->caixas[i] != NULL)
+            {
+                printf("caixa tamanho: %d %s\n", fila->caixas[i]->tamanho, fila->caixas[i]->status);
+            }
+        }
     }
     printf("\n");
 
@@ -270,11 +207,12 @@ void exibir(Fila *fila, Pilha *pilha1, Pilha *pilha2)
 
 void exibirMenu()
 {
-    printf("\nMenu:\n");
+    printf("\n>>>>>>Menu:\n");
     printf("1. Cadastar\n");
     printf("2. Empilhar\n");
-    printf("3. Desempilhar\n");
-    printf("4. Exibir\n");
+    printf("3. Desempilhar Pilha 1\n");
+    printf("4. Desempilhar Pilha 2\n");
+    printf("5. Exibir\n");
     printf("0. Sair\n");
     printf("Escolha uma opcao: ");
 }
@@ -296,17 +234,18 @@ int main()
         switch (escolha)
         {
         case 1:
-        {
             enfileirar(&fila, &pilha1, &pilha2);
             break;
-        }
         case 2:
             empilhar(&fila, &pilha1, &pilha2);
             break;
         case 3:
-            desempilharAmbasPilhas(&pilha1, &pilha2);
+            desempilhar(&pilha1);
             break;
         case 4:
+            desempilhar(&pilha2);
+            break;
+        case 5:
             exibir(&fila, &pilha1, &pilha2);
             break;
         case 0:
@@ -316,6 +255,5 @@ int main()
             printf("Opcao invalida. Tente novamente.\n");
         }
     } while (escolha != 0);
-
     return 0;
 }
